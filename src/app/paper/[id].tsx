@@ -6,6 +6,7 @@ import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'rea
 import { ActionBar, LinkRow, Section, StatBox } from '@/components/DetailParts';
 import { ErrorState, SkeletonBlock } from '@/components/states';
 import { AppText, Button, Chip, ContentColumn, KindBadge } from '@/components/ui';
+import { useReadSignal } from '@/features/activity/useReadSignal';
 import { upvotePaper } from '@/features/auth/api';
 import { useHfSession } from '@/features/auth/session';
 import { recordOpen } from '@/features/activity/store';
@@ -163,6 +164,7 @@ function PaperDetail({ id }: { id: string }) {
 /** Swipe horizontally between papers when opened from a list; single page otherwise. */
 export default function PaperScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  useReadSignal('paper', id);
   const { width } = useWindowDimensions();
   const sequence = useMemo(() => {
     const seq = getPaperSequence();

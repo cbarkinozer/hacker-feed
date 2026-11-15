@@ -90,6 +90,7 @@ export default function RootLayout() {
             <Stack.Screen name="model/[...id]" options={{ title: 'Model' }} />
             <Stack.Screen name="article/[source]/[...path]" options={{ title: 'Article' }} />
             <Stack.Screen name="search" options={{ title: 'Search' }} />
+            <Stack.Screen name="learned" options={{ title: 'What I’ve learned' }} />
             <Stack.Screen
               name="settings"
               options={{

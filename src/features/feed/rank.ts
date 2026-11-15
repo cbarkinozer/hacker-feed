@@ -1,4 +1,4 @@
-import { affinityScore, type Affinity } from '@/features/activity/affinity';
+import { affinityScore, hasProfile, topicSignal, type Affinity } from '@/features/activity/affinity';
 
 import type { FeedItem } from './types';
 import { itemKey } from './types';
@@ -58,21 +58,39 @@ export function dedupe(items: FeedItem[]): FeedItem[] {
   });
 }
 
+/** Every Nth slot goes to something outside the learned profile, so the feed never narrows into a bubble. */
+export const EXPLORE_EVERY = 5;
+
 /**
  * Sorts by score, then interleaves so no more than two items of the same kind appear
- * in a row while any other kind remains.
+ * in a row while any other kind remains. Once a profile exists, every fifth slot is an
+ * exploration pick: the best-scoring item the profile has no opinion on.
  */
 export function rankForYou(items: FeedItem[], ctx: RankContext): FeedItem[] {
+  const profiled = hasProfile(ctx.affinity);
   const pool = dedupe(items)
-    .map((item) => ({ item, score: scoreItem(item, ctx) }))
+    .map((item) => {
+      return {
+        item,
+        score: scoreItem(item, ctx),
+        // Neutral: no learned topic/author, picked topic or follow either way (kind share doesn't count).
+        neutral:
+          Math.abs(topicSignal(item, ctx.affinity)) < 0.25 && !matchesInterest(item, ctx.interests) && !isFollowed(item, ctx.following),
+      };
+    })
     .sort((a, b) => b.score - a.score || timeOf(b.item) - timeOf(a.item));
   const out: FeedItem[] = [];
   while (pool.length) {
-    const [a, b] = out.slice(-2);
     let pick = 0;
-    if (a && b && a.kind === b.kind) {
-      const alt = pool.findIndex((p) => p.item.kind !== a.kind);
-      if (alt > 0) pick = alt;
+    const exploring = profiled && out.length % EXPLORE_EVERY === EXPLORE_EVERY - 1;
+    const neutral = exploring ? pool.findIndex((p) => p.neutral) : -1;
+    if (neutral >= 0) pick = neutral;
+    else {
+      const [a, b] = out.slice(-2);
+      if (a && b && a.kind === b.kind) {
+        const alt = pool.findIndex((p) => p.item.kind !== a.kind);
+        if (alt > 0) pick = alt;
+      }
     }
     out.push(pool.splice(pick, 1)[0].item);
   }

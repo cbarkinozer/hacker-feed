@@ -1,6 +1,7 @@
-import { useCallback, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { recordSkips } from '@/features/activity/store';
 import type { FeedItem } from '@/features/feed/types';
 import { itemKey } from '@/features/feed/types';
 import { usePreferences } from '@/features/preferences/store';
@@ -31,7 +32,12 @@ interface Props {
   grid?: boolean;
   /** itemKey of the first item older than the last visit; shows a "caught up" divider above it. */
   caughtUpKey?: string;
+  /** For You feed: lets the user hide items, learns from what is scrolled past, and says why items rank. */
+  personalized?: boolean;
 }
+
+// An item counts as seen after sitting mostly on screen for a second.
+const VIEWABILITY = { itemVisiblePercentThreshold: 60, minimumViewTime: 1000 };
 
 export function FeedList({
   items,
@@ -50,8 +56,20 @@ export function FeedList({
   ranked,
   grid,
   caughtUpKey,
+  personalized,
 }: Props) {
   const c = useColors();
+  // FlatList forbids swapping this handler, so it stays stable and reads the latest flag from a ref.
+  const learning = useRef(false);
+  useEffect(() => {
+    learning.current = !!personalized;
+  }, [personalized]);
+  const onViewable = useCallback(({ changed }: { changed: { isViewable: boolean; item?: unknown }[] }) => {
+    if (!learning.current) return;
+    // Items that were seen and have now scrolled away.
+    const gone = changed.filter((t) => !t.isViewable && t.item).map((t) => t.item as FeedItem);
+    if (gone.length) recordSkips(gone);
+  }, []);
   const { density } = usePreferences();
   const { width } = useWindowDimensions();
   const columns = grid && density === 'comfortable' ? (width >= 1300 ? 3 : width >= 860 ? 2 : 1) : 1;
@@ -81,10 +99,11 @@ export function FeedList({
           showKind={showKind}
           rank={ranked ? index + 1 : undefined}
           density={density}
+          personalized={personalized}
         />
       </View>
     ),
-    [onPressItem, isNew, showKind, ranked, density, columns, caughtUpKey],
+    [onPressItem, isNew, showKind, ranked, density, columns, caughtUpKey, personalized],
   );
 
   let body: ReactElement | null = null;
@@ -116,6 +135,8 @@ export function FeedList({
           <View style={styles.footer} />
         )
       }
+      onViewableItemsChanged={onViewable}
+      viewabilityConfig={VIEWABILITY}
       onEndReached={hasNextPage && !isFetchingNextPage ? onEndReached : undefined}
       onEndReachedThreshold={0.6}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.textMuted} colors={[c.accentStrong]} />}

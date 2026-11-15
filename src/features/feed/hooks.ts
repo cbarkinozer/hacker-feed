@@ -17,11 +17,11 @@ import { fetchModels, modelToFeedItem, type CursorPage, type Model } from '@/fea
 import { fetchDatasets, fetchSpaces, type RepoSort } from '@/features/repos/api';
 import { fetchDailyPapers, paperToFeedItem, type Page, type Paper, type PaperSort } from '@/features/papers/api';
 import { getPreviousVisit, usePreferences } from '@/features/preferences/store';
-import { useAffinity } from '@/features/activity/store';
+import { activityStore, useDismissed } from '@/features/activity/store';
 import { rememberItems } from '@/lib/item-cache';
 
 import { buildHomeFeed } from './rank';
-import type { ContentKind, FeedItem } from './types';
+import { itemKey, type ContentKind, type FeedItem } from './types';
 
 export type HomeMode = 'forYou' | 'latest' | 'following';
 
@@ -151,7 +151,10 @@ interface SourceStatus {
  */
 export function useHomeFeed(mode: HomeMode) {
   const prefs = usePreferences();
-  const affinity = useAffinity();
+  // Ranking uses a snapshot of what was learned, refreshed on pull-to-refresh, so the feed
+  // doesn't reshuffle under your thumb while you scroll and the profile keeps updating.
+  const [affinity, setAffinity] = useState(() => activityStore.get().affinity);
+  const dismissed = useDismissed();
   const on = (k: ContentKind) => prefs.homeKinds.includes(k);
   const papers = usePapersInfinite('latest', on('paper'));
   const models = useModelsInfinite('trending', undefined, on('model'));
@@ -211,12 +214,13 @@ export function useHomeFeed(mode: HomeMode) {
   const followedPages = followedModels.map((q) => q.data).filter((d): d is CursorPage<Model> => !!d);
   // "now" comes from the newest fetch time so ranking stays pure and stable between renders.
   const now = Math.max(0, ...sources.map((s) => s.q.dataUpdatedAt), ...followedModels.map((q) => q.dataUpdatedAt));
+  const hidden = new Set(dismissed);
   const items = buildHomeFeed(
     mode,
     [...sources.map((s) => s.rows), ...(showVideos ? [videoRows] : [])],
     followedPages.flatMap((d) => d.items.map(modelToFeedItem)),
     { interests: prefs.interests, following: prefs.following.map((h) => h.toLowerCase()), now, affinity },
-  );
+  ).filter((i) => !hidden.has(itemKey(i)));
   useEffect(() => rememberItems(items), [items]);
 
   const errors: SourceStatus[] = sources.filter((s) => s.q.error && !s.q.data).map((s) => ({ kind: s.kind, error: s.q.error }));
@@ -238,6 +242,7 @@ export function useHomeFeed(mode: HomeMode) {
       for (const s of sources) if (s.q.hasNextPage && !s.q.isFetchingNextPage) s.q.fetchNextPage();
     },
     refetch: async () => {
+      setAffinity(activityStore.get().affinity);
       await Promise.all([...sources.map((s) => s.q.refetch()), ...followedModels.map((q) => q.refetch())]);
     },
   };

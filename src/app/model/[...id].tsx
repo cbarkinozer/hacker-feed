@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { useReadSignal } from '@/features/activity/useReadSignal';
 import { ActionBar, LinkRow, Section, StatBox } from '@/components/DetailParts';
 import { Markdown } from '@/components/Markdown';
 import { ErrorState, SkeletonBlock } from '@/components/states';
@@ -46,6 +47,7 @@ const CARD_PREVIEW_BLOCKS = 60;
 export default function ModelScreen() {
   const params = useLocalSearchParams<{ id: string[] | string }>();
   const id = Array.isArray(params.id) ? params.id.join('/') : params.id;
+  useReadSignal('model', id);
   const c = useColors();
   const cached = recallItem('model', id);
   const following = usePreferences().following;

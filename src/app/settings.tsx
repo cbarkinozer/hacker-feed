@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -6,7 +7,7 @@ import { Section } from '@/components/DetailParts';
 import { AppText, Button, Chip, ContentColumn, Segmented } from '@/components/ui';
 import { UnofficialNotice } from '@/components/UnofficialNotice';
 import { topSignals } from '@/features/activity/affinity';
-import { resetAffinity, useAffinity } from '@/features/activity/store';
+import { useAffinity } from '@/features/activity/store';
 import { KIND_LABEL } from '@/features/feed/types';
 import {
   ALL_KINDS,
@@ -263,11 +264,14 @@ export default function SettingsScreen() {
               ? `Learned from what you open and save: ${learned.join(', ')}.`
               : 'For You also learns from what you open and save. Nothing has been learned yet.'}
           </AppText>
-          {learned.length ? (
-            <View style={styles.chips}>
-              <Button label="Reset learned interests" icon="refresh" variant="secondary" onPress={resetAffinity} />
-            </View>
-          ) : null}
+          <View style={styles.chips}>
+            <Button
+              label="What I've learned"
+              icon="analytics-outline"
+              variant="secondary"
+              onPress={() => router.push('/learned' as never)}
+            />
+          </View>
         </Section>
 
         <Section title="Following">

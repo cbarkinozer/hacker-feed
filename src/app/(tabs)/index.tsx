@@ -94,6 +94,7 @@ export default function HomeScreen() {
       empty={empty}
       isNew={isNew}
       caughtUpKey={caughtUpKey}
+      personalized={mode === 'forYou'}
       onPressItem={onPress}
       fallbackUrl="https://huggingface.co"
     />

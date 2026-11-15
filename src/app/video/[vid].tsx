@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { ActionBar, LinkRow, Section, StatBox } from '@/components/DetailParts';
 import { MessageState } from '@/components/states';
 import { AppText, Button, Chip, ContentColumn, KindBadge } from '@/components/ui';
+import { useReadSignal } from '@/features/activity/useReadSignal';
 import { hnPage } from '@/features/hn/api';
 import { findVideo, thumbnailUrl, videoToFeedItem, youtubeUrl } from '@/features/videos/api';
 import { rememberItems } from '@/lib/item-cache';
@@ -16,6 +17,7 @@ export default function VideoScreen() {
   const { vid } = useLocalSearchParams<{ vid: string }>();
   const c = useColors();
   const video = findVideo(vid);
+  useReadSignal('video', vid);
   useEffect(() => {
     if (video) rememberItems([videoToFeedItem(video)]);
   }, [video]);

@@ -150,8 +150,8 @@ describe('learned affinity', () => {
 
   it('decays over time and stays bounded', () => {
     const a = reinforce(EMPTY_AFFINITY, { kind: 'model', tags: ['gguf'], handles: [] }, 10, t0);
-    const later = decay(a, t0 + 14 * 86_400_000);
-    expect(later.tags.gguf).toBeCloseTo(10 * 0.95 ** 14);
+    const later = decay(a, t0 + 21 * 86_400_000);
+    expect(later.tags.gguf).toBeCloseTo(5);
     expect(affinityScore(item('x', { kind: 'model', tags: ['gguf'] }), a)).toBeLessThanOrEqual(1);
     expect(affinityScore(item('x'), undefined)).toBe(0);
   });

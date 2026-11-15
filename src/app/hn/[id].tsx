@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { useReadSignal } from '@/features/activity/useReadSignal';
 import { ActionBar, LinkRow, Section, StatBox } from '@/components/DetailParts';
 import { ErrorState, SkeletonBlock } from '@/components/states';
 import { AppText, Button, ContentColumn, KindBadge } from '@/components/ui';
@@ -14,6 +15,7 @@ import { radius, spacing, useColors } from '@/theme';
 
 export default function HnStoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  useReadSignal('hn', id);
   const c = useColors();
   const cached = recallItem('hn', id);
   const { data, error, isPending, refetch } = useQuery({

@@ -8,8 +8,11 @@ import { detailHref } from '@/lib/navigation';
 import { compactNumber, formatAuthors, relativeTime } from '@/lib/format';
 import { kindColor, radius, spacing, useColors } from '@/theme';
 
+import { explainItem } from '@/features/activity/affinity';
+import { dismissItem, useAffinity } from '@/features/activity/store';
+
 import { BookmarkButton } from './BookmarkButton';
-import { AppText, KindBadge, Stat } from './ui';
+import { AppText, IconButton, KindBadge, Stat } from './ui';
 
 export type CardDensity = 'comfortable' | 'compact';
 
@@ -21,6 +24,8 @@ interface Props {
   /** 1-based position for ranked lists (weekly/monthly top papers). */
   rank?: number;
   density?: CardDensity;
+  /** For You: shows "show less like this" and the reason the item ranks here. */
+  personalized?: boolean;
 }
 
 const isVideo = (u: string) => /\.(mp4|webm|mov)(\?|$)/i.test(u);
@@ -44,8 +49,32 @@ function Stats({ item }: { item: FeedItem }) {
   );
 }
 
+function DismissButton({ item }: { item: FeedItem }) {
+  const c = useColors();
+  return (
+    <IconButton
+      icon="eye-off-outline"
+      size={18}
+      color={c.textMuted}
+      label={`Show less like ${item.title}`}
+      onPress={() => dismissItem(item)}
+    />
+  );
+}
+
+/** One line saying why this item ranks here, once the profile has learned enough to tell. */
+function Reason({ item }: { item: FeedItem }) {
+  const reason = explainItem(item, useAffinity());
+  if (!reason) return null;
+  return (
+    <AppText variant="caption" tone="muted" numberOfLines={1} style={styles.reason}>
+      {reason}
+    </AppText>
+  );
+}
+
 /** Hacker News–style dense row: rank, title, one meta line. */
-function CompactRow({ item, onPress, isNew, rank, showKind = true }: Props) {
+function CompactRow({ item, onPress, isNew, rank, showKind = true, personalized }: Props) {
   const c = useColors();
   const engagement = item.upvotes ?? item.likes;
   const meta = [
@@ -84,13 +113,14 @@ function CompactRow({ item, onPress, isNew, rank, showKind = true }: Props) {
           </AppText>
         </View>
       </Pressable>
+      {personalized ? <DismissButton item={item} /> : null}
       <BookmarkButton item={item} size={18} />
     </View>
   );
 }
 
 export const FeedCard = memo(function FeedCard(props: Props) {
-  const { item, onPress, isNew, showKind = true, rank, density = 'comfortable' } = props;
+  const { item, onPress, isNew, showKind = true, rank, density = 'comfortable', personalized } = props;
   const c = useColors();
   if (density === 'compact') return <CompactRow {...props} />;
 
@@ -174,8 +204,14 @@ export const FeedCard = memo(function FeedCard(props: Props) {
               </AppText>
             ) : null}
           </View>
+          {personalized ? <Reason item={item} /> : null}
         </View>
       </Pressable>
+      {personalized ? (
+        <View style={styles.dismiss}>
+          <DismissButton item={item} />
+        </View>
+      ) : null}
       <View style={[styles.bookmark, hero && [styles.bookmarkOnImage, { backgroundColor: c.surfaceElevated }]]}>
         <BookmarkButton item={item} size={20} />
       </View>
@@ -191,6 +227,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingRight: 36, minHeight: 28 },
   rank: { fontVariant: ['tabular-nums'] },
   bookmark: { position: 'absolute', top: spacing.sm + 2, right: spacing.sm + 2 },
+  dismiss: { position: 'absolute', bottom: spacing.sm + 2, right: spacing.sm + 2 },
+  reason: { fontStyle: 'italic' },
   bookmarkOnImage: { borderRadius: radius.pill, padding: 2 },
   newPill: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.sm },
   body: { flexDirection: 'row', gap: spacing.md },

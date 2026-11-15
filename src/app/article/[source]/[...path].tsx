@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { useReadSignal } from '@/features/activity/useReadSignal';
 import { ActionBar, Section } from '@/components/DetailParts';
 import { Markdown } from '@/components/Markdown';
 import { ErrorState, SkeletonBlock } from '@/components/states';
@@ -27,6 +28,7 @@ export default function ArticleScreen() {
   }>();
   const kind: FeedItem['kind'] = params.source === 'community' ? 'community' : 'blog';
   const path = Array.isArray(params.path) ? params.path.join('/') : params.path;
+  useReadSignal(kind, path);
   const c = useColors();
   const following = usePreferences().following;
   const url = `${HF_BASE}/blog/${path}`;
