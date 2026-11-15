@@ -1,0 +1,103 @@
+import type { FeedItem } from './types';
+import { itemKey } from './types';
+
+export interface RankContext {
+  /** Lowercase topic terms the user picked (e.g. "robotics", "text-to-image"). */
+  interests: string[];
+  /** HF handles the user follows, lowercase. */
+  following: string[];
+  now: number;
+}
+
+const HOUR = 3_600_000;
+
+export const timeOf = (item: FeedItem) => {
+  const t = item.date ? Date.parse(item.date) : NaN;
+  return Number.isNaN(t) ? 0 : t;
+};
+
+export function matchesInterest(item: FeedItem, interests: string[]): boolean {
+  if (!interests.length) return false;
+  const hay = `${item.title} ${item.summary ?? ''} ${item.tags.join(' ')}`.toLowerCase();
+  return interests.some((term) => term && hay.includes(term));
+}
+
+export function isFollowed(item: FeedItem, following: string[]): boolean {
+  if (!following.length) return false;
+  return item.handles.some((h) => following.includes(h.toLowerCase()));
+}
+
+/** Transparent, rule-based score: recency + popularity + interest/follow boosts. No ML. */
+export function scoreItem(item: FeedItem, ctx: RankContext): number {
+  const t = timeOf(item);
+  const ageHours = t ? Math.max(0, (ctx.now - t) / HOUR) : 24 * 30;
+  const recency = Math.exp(-ageHours / 72);
+  const engagement = item.upvotes ?? item.likes ?? 0;
+  const popularity = Math.min(1, Math.log10(1 + engagement) / 3.5);
+  return recency + popularity + (matchesInterest(item, ctx.interests) ? 1.2 : 0) + (isFollowed(item, ctx.following) ? 1.5 : 0);
+}
+
+/** De-duplicates by kind+id, keeping the first occurrence. */
+export function dedupe(items: FeedItem[]): FeedItem[] {
+  const seen = new Set<string>();
+  return items.filter((i) => {
+    const k = itemKey(i);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/**
+ * Sorts by score, then interleaves so no more than two items of the same kind appear
+ * in a row while any other kind remains.
+ */
+export function rankForYou(items: FeedItem[], ctx: RankContext): FeedItem[] {
+  const pool = dedupe(items)
+    .map((item) => ({ item, score: scoreItem(item, ctx) }))
+    .sort((a, b) => b.score - a.score || timeOf(b.item) - timeOf(a.item));
+  const out: FeedItem[] = [];
+  while (pool.length) {
+    const [a, b] = out.slice(-2);
+    let pick = 0;
+    if (a && b && a.kind === b.kind) {
+      const alt = pool.findIndex((p) => p.item.kind !== a.kind);
+      if (alt > 0) pick = alt;
+    }
+    out.push(pool.splice(pick, 1)[0].item);
+  }
+  return out;
+}
+
+export function sortLatest(items: FeedItem[]): FeedItem[] {
+  return dedupe(items).sort((a, b) => timeOf(b) - timeOf(a));
+}
+
+export function isNewSince(item: FeedItem, lastVisit: number | null): boolean {
+  return lastVisit !== null && timeOf(item) > lastVisit;
+}
+
+/**
+ * Builds the Home feed from per-source page batches (`sources[s][page]`).
+ * For You ranks each page batch separately so "load more" appends rather than reshuffles.
+ */
+export function buildHomeFeed(
+  mode: 'forYou' | 'latest' | 'following',
+  sources: FeedItem[][][],
+  extraFollowed: FeedItem[],
+  ctx: RankContext,
+): FeedItem[] {
+  const all = sources.flatMap((pages) => pages.flat());
+  if (mode === 'following') return sortLatest([...extraFollowed, ...all].filter((i) => isFollowed(i, ctx.following)));
+  if (mode === 'latest') return sortLatest(all);
+  const depth = Math.max(0, ...sources.map((pages) => pages.length));
+  const out: FeedItem[] = [];
+  for (let i = 0; i < depth; i++)
+    out.push(
+      ...rankForYou(
+        sources.flatMap((pages) => pages[i] ?? []),
+        ctx,
+      ),
+    );
+  return dedupe(out);
+}
