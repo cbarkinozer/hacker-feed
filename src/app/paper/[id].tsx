@@ -1,12 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ActionBar, LinkRow, Section, StatBox } from '@/components/DetailParts';
 import { ErrorState, SkeletonBlock } from '@/components/states';
 import { AppText, Button, Chip, ContentColumn, KindBadge } from '@/components/ui';
+import { upvotePaper } from '@/features/auth/api';
+import { useHfSession } from '@/features/auth/session';
+import { recordOpen } from '@/features/activity/store';
 import { queryKeys } from '@/features/feed/hooks';
+import { KIND_LABEL } from '@/features/feed/types';
+import { modelUrl } from '@/features/models/api';
 import { fetchPaper, paperLinks, paperToFeedItem } from '@/features/papers/api';
 import { isFollowingHandle, toggleFollow, usePreferences } from '@/features/preferences/store';
 import { compactNumber, relativeTime } from '@/lib/format';
@@ -24,6 +29,23 @@ function PaperDetail({ id }: { id: string }) {
   const following = usePreferences().following;
   const item = data ? paperToFeedItem(data) : cached;
   const links = paperLinks(id);
+  const session = useHfSession();
+  const [upvoteState, setUpvoteState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
+  // Signed in: try the API, and fall back to the website if Hugging Face rejects it. Signed out: website.
+  const upvote = {
+    state: upvoteState,
+    press: async () => {
+      if (!session) return openExternal(links.hf);
+      setUpvoteState('busy');
+      try {
+        await upvotePaper(id, session);
+        setUpvoteState('done');
+      } catch {
+        setUpvoteState('failed');
+        void openExternal(links.hf);
+      }
+    },
+  };
 
   if (!item && error) return <ErrorState error={error} onRetry={() => refetch()} fallbackUrl={links.hf} />;
 
@@ -58,8 +80,21 @@ function PaperDetail({ id }: { id: string }) {
         {item ? (
           <ActionBar
             item={item}
-            extra={<Button label="Upvote on HF" icon="arrow-up" variant="secondary" onPress={() => openExternal(links.hf)} />}
+            extra={
+              <Button
+                label={upvote.state === 'done' ? 'Upvoted' : upvote.state === 'busy' ? 'Upvoting…' : 'Upvote on HF'}
+                icon="arrow-up"
+                variant={upvote.state === 'done' ? 'primary' : 'secondary'}
+                disabled={upvote.state === 'busy' || upvote.state === 'done'}
+                onPress={upvote.press}
+              />
+            }
           />
+        ) : null}
+        {upvote.state === 'failed' ? (
+          <AppText variant="caption" tone="muted">
+            Couldn&apos;t upvote from the app, so the paper page was opened instead.
+          </AppText>
         ) : null}
 
         <Section title="Abstract">
@@ -81,6 +116,21 @@ function PaperDetail({ id }: { id: string }) {
                 <Chip key={k} label={k} />
               ))}
             </View>
+          </Section>
+        ) : null}
+
+        {data?.linked.length ? (
+          <Section title={`Released with this paper · ${data.linked.length}`}>
+            {data.linked.slice(0, 8).map((l) => (
+              <LinkRow
+                key={`${l.kind}:${l.id}`}
+                icon={l.kind === 'model' ? 'cube-outline' : l.kind === 'dataset' ? 'server-outline' : 'rocket-outline'}
+                label={`${l.emoji ? `${l.emoji} ` : ''}${l.id}`}
+                detail={KIND_LABEL[l.kind]}
+                url={l.kind === 'model' ? modelUrl(l.id) : `https://huggingface.co/${l.kind === 'dataset' ? 'datasets' : 'spaces'}/${l.id}`}
+                onPress={l.kind === 'model' ? () => router.push(`/model/${l.id}` as never) : undefined}
+              />
+            ))}
           </Section>
         ) : null}
 
@@ -143,7 +193,12 @@ export default function PaperScreen() {
         windowSize={3}
         initialNumToRender={1}
         maxToRenderPerBatch={2}
-        onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
+        onMomentumScrollEnd={(e) => {
+          const next = Math.round(e.nativeEvent.contentOffset.x / width);
+          setIndex(next);
+          // Swiping to a paper counts as reading it, same as tapping it in a list.
+          if (sequence[next]) recordOpen({ kind: 'paper', id: sequence[next] });
+        }}
         renderItem={({ item }) => (
           <View style={{ width }}>
             <PaperDetail id={item} />

@@ -57,7 +57,7 @@ export function buildUrl(path: string, params: Record<string, string | number | 
   return `${url}${url.includes('?') ? '&' : '?'}${qs.join('&')}`;
 }
 
-async function request(url: string, signal?: AbortSignal, timeoutMs = 15000): Promise<Response> {
+async function request(url: string, signal?: AbortSignal, extraHeaders?: Record<string, string>, timeoutMs = 15000): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
@@ -65,11 +65,11 @@ async function request(url: string, signal?: AbortSignal, timeoutMs = 15000): Pr
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { Accept: 'application/json, application/xml;q=0.9, */*;q=0.8' },
+      headers: { Accept: 'application/json, application/xml;q=0.9, */*;q=0.8', ...extraHeaders },
     });
     if (!res.ok) {
       const reset = parseRateLimitReset(res.headers.get('ratelimit'));
-      throw new HttpError(res.status, res.status === 429 ? 'Rate limited by Hugging Face' : `Request failed (${res.status})`, reset);
+      throw new HttpError(res.status, res.status === 429 ? 'Rate limited' : `Request failed (${res.status})`, reset);
     }
     return res;
   } catch (err) {
@@ -82,8 +82,8 @@ async function request(url: string, signal?: AbortSignal, timeoutMs = 15000): Pr
   }
 }
 
-export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<FetchResult<T>> {
-  const res = await request(url, signal);
+export async function fetchJson<T>(url: string, signal?: AbortSignal, headers?: Record<string, string>): Promise<FetchResult<T>> {
+  const res = await request(url, signal, headers);
   const data = (await res.json()) as T;
   return { data, next: parseNextLink(res.headers.get('link')) };
 }
@@ -96,10 +96,10 @@ export async function fetchText(url: string, signal?: AbortSignal): Promise<stri
 /** Human-friendly message for any error thrown by the adapters. */
 export function describeError(err: unknown): string {
   if (err instanceof HttpError) {
-    if (err.isRateLimited)
-      return `Hugging Face is rate limiting requests. Try again${err.retryAfter ? ` in ${err.retryAfter}s` : ' shortly'}.`;
+    if (err.isRateLimited) return `Too many requests right now. Try again${err.retryAfter ? ` in ${err.retryAfter}s` : ' shortly'}.`;
     if (err.status === 404) return 'This content could not be found.';
-    if (err.status >= 500) return 'Hugging Face is having trouble right now.';
+    if (err.status === 401 || err.status === 403) return 'This needs valid credentials.';
+    if (err.status >= 500) return 'The server is having trouble right now.';
     return err.message;
   }
   if (err instanceof NetworkError) return `${err.message}. Check your connection.`;

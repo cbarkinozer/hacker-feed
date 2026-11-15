@@ -44,8 +44,14 @@ export type Colors = typeof palette.light;
 export const kindColor: Record<ContentKind, string> = {
   paper: '#6366F1',
   model: '#F59E0B',
+  space: '#8B5CF6',
+  dataset: '#EF4444',
   blog: '#10B981',
   community: '#EC4899',
+  hn: '#FF6600',
+  video: '#DC2626',
+  kaggle: '#20BEFF',
+  competition: '#0EA5E9',
 };
 
 export const spacing = {
@@ -58,6 +64,9 @@ export const spacing = {
 } as const;
 export const radius = { sm: 6, md: 10, lg: 16, pill: 999 } as const;
 export const MAX_CONTENT_WIDTH = 760;
+export const MAX_GRID_WIDTH = 1280;
+/** Width at which Home shows a sidebar next to the feed. */
+export const SIDEBAR_BREAKPOINT = 1100;
 
 export const fonts = {
   mono: Platform.select({

@@ -11,7 +11,9 @@ import { rememberItems, setPaperSequence } from '@/lib/item-cache';
 import { openItem } from '@/lib/navigation';
 
 const SORTS: { value: PaperSort; label: string }[] = [
-  { value: 'latest', label: 'Daily' },
+  { value: 'latest', label: 'Today' },
+  { value: 'week', label: 'This week' },
+  { value: 'month', label: 'This month' },
   { value: 'trending', label: 'Trending' },
 ];
 
@@ -47,6 +49,7 @@ export default function PapersScreen() {
       onPressItem={onPress}
       isNew={isNew}
       showKind={false}
+      ranked={sort === 'week' || sort === 'month'}
       fallbackUrl="https://huggingface.co/papers"
       header={
         <ContentColumn>

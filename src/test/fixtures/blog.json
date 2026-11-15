@@ -1,1 +1,109 @@
-{"allBlogs": [{"_id": "6af373f04de1b8c765055045", "isUpvotedByUser": false, "numCoauthors": 2, "publishedAt": "2026-11-13T18:00:39.078Z", "editedAt": "2026-11-13T18:57:45.621Z", "slug": "simready-assets-robot-pick-and-place", "title": "Build a Robot Pick-and-Place Simulation with SimReady Assets", "upvotes": 27, "upvotes7d": 27, "thumbnail": "https://cdn-uploads.huggingface.co/production/uploads/6abfe9e7d7cf09a9b38ef308/HFZWtQ2i9VN_agjeUw2HB.gif", "authorsData": [{"_id": "60262b67268c201cdc8b7d43", "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/65df9200dc3292a8983e5017/Vs5FPVCH-VZBipV3qKTuy.png", "fullname": "NVIDIA", "name": "nvidia", "type": "org", "isHf": false, "isHfAdmin": false, "isMod": false, "plan": "plus", "followerCount": 75546, "isUserFollowing": false}], "url": "/blog/nvidia/simready-assets-robot-pick-and-place", "apiPrefix": "/api/blog/nvidia/simready-assets-robot-pick-and-place", "canonical": false, "status": "published", "isHFChangelog": false, "orgPlan": "plus"}, {"_id": "6af3673027d9a3ecc5093def", "isUpvotedByUser": false, "numCoauthors": 0, "publishedAt": "2026-11-13T17:02:35.607Z", "editedAt": "2026-11-13T17:02:48.127Z", "slug": "xybench", "title": "XYBench: Helping with the problem behind the question", "upvotes": 7, "upvotes7d": 7, "thumbnail": "https://cdn-uploads.huggingface.co/production/uploads/638e39b249de7ae552d977b5/aOWdQgZ8ioJcx9Eii4iob.png", "authorsData": [{"_id": "5e70f3648ce3c604d78fe132", "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/652db071b62cf1f8463221e2/CxxwFiaomTa1MCX_B7-pT.png", "fullname": "Ai2", "name": "allenai", "type": "org", "isHf": false, "isHfAdmin": false, "isMod": false, "plan": "enterprise", "followerCount": 7047, "isUserFollowing": false}], "url": "/blog/allenai/xybench", "apiPrefix": "/api/blog/allenai/xybench", "canonical": false, "status": "published", "isHFChangelog": false, "orgPlan": "enterprise"}, {"_id": "6af5d9c639db85e800d23338", "isUpvotedByUser": false, "numCoauthors": 2, "publishedAt": "2026-11-13T14:05:22.744Z", "editedAt": "2026-11-13T14:05:22.744Z", "slug": "llama-cpp-v1", "title": "llama.cpp v1.0.0 : A stronger foundation for the local AI ecosystem", "upvotes": 171, "upvotes7d": 171, "thumbnail": "https://cdn-uploads.huggingface.co/production/uploads/63148d3b996c52bf0142cdbe/2PgU1GxpJX_LVORaP2RRy.png", "authorsData": [{"_id": "655609527f8195872ea8b6a1", "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/63148d3b996c52bf0142cdbe/HXyNkyB0_nHI5WDNdiKHZ.png", "fullname": "ggml-org", "name": "ggml-org", "type": "org", "isHf": false, "isHfAdmin": false, "isMod": false, "plan": "team", "followerCount": 3320, "isUserFollowing": false}], "url": "/blog/ggml-org/llama-cpp-v1", "apiPrefix": "/api/blog/ggml-org/llama-cpp-v1", "canonical": false, "status": "published", "isHFChangelog": false, "orgPlan": "team"}], "pageIndex": 0, "isPagination": true, "numTotalItems": 907, "numItemsPerPage": 14, "lang": "en", "canCreateBlog": false}
+{
+  "allBlogs": [
+    {
+      "_id": "6af373f04de1b8c765055045",
+      "isUpvotedByUser": false,
+      "numCoauthors": 2,
+      "publishedAt": "2026-11-13T18:00:39.078Z",
+      "editedAt": "2026-11-13T18:57:45.621Z",
+      "slug": "simready-assets-robot-pick-and-place",
+      "title": "Build a Robot Pick-and-Place Simulation with SimReady Assets",
+      "upvotes": 27,
+      "upvotes7d": 27,
+      "thumbnail": "https://cdn-uploads.huggingface.co/production/uploads/6abfe9e7d7cf09a9b38ef308/HFZWtQ2i9VN_agjeUw2HB.gif",
+      "authorsData": [
+        {
+          "_id": "60262b67268c201cdc8b7d43",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/65df9200dc3292a8983e5017/Vs5FPVCH-VZBipV3qKTuy.png",
+          "fullname": "NVIDIA",
+          "name": "nvidia",
+          "type": "org",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "plan": "plus",
+          "followerCount": 75546,
+          "isUserFollowing": false
+        }
+      ],
+      "url": "/blog/nvidia/simready-assets-robot-pick-and-place",
+      "apiPrefix": "/api/blog/nvidia/simready-assets-robot-pick-and-place",
+      "canonical": false,
+      "status": "published",
+      "isHFChangelog": false,
+      "orgPlan": "plus"
+    },
+    {
+      "_id": "6af3673027d9a3ecc5093def",
+      "isUpvotedByUser": false,
+      "numCoauthors": 0,
+      "publishedAt": "2026-11-13T17:02:35.607Z",
+      "editedAt": "2026-11-13T17:02:48.127Z",
+      "slug": "xybench",
+      "title": "XYBench: Helping with the problem behind the question",
+      "upvotes": 7,
+      "upvotes7d": 7,
+      "thumbnail": "https://cdn-uploads.huggingface.co/production/uploads/638e39b249de7ae552d977b5/aOWdQgZ8ioJcx9Eii4iob.png",
+      "authorsData": [
+        {
+          "_id": "5e70f3648ce3c604d78fe132",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/652db071b62cf1f8463221e2/CxxwFiaomTa1MCX_B7-pT.png",
+          "fullname": "Ai2",
+          "name": "allenai",
+          "type": "org",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "plan": "enterprise",
+          "followerCount": 7047,
+          "isUserFollowing": false
+        }
+      ],
+      "url": "/blog/allenai/xybench",
+      "apiPrefix": "/api/blog/allenai/xybench",
+      "canonical": false,
+      "status": "published",
+      "isHFChangelog": false,
+      "orgPlan": "enterprise"
+    },
+    {
+      "_id": "6af5d9c639db85e800d23338",
+      "isUpvotedByUser": false,
+      "numCoauthors": 2,
+      "publishedAt": "2026-11-13T14:05:22.744Z",
+      "editedAt": "2026-11-13T14:05:22.744Z",
+      "slug": "llama-cpp-v1",
+      "title": "llama.cpp v1.0.0 : A stronger foundation for the local AI ecosystem",
+      "upvotes": 171,
+      "upvotes7d": 171,
+      "thumbnail": "https://cdn-uploads.huggingface.co/production/uploads/63148d3b996c52bf0142cdbe/2PgU1GxpJX_LVORaP2RRy.png",
+      "authorsData": [
+        {
+          "_id": "655609527f8195872ea8b6a1",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/63148d3b996c52bf0142cdbe/HXyNkyB0_nHI5WDNdiKHZ.png",
+          "fullname": "ggml-org",
+          "name": "ggml-org",
+          "type": "org",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "plan": "team",
+          "followerCount": 3320,
+          "isUserFollowing": false
+        }
+      ],
+      "url": "/blog/ggml-org/llama-cpp-v1",
+      "apiPrefix": "/api/blog/ggml-org/llama-cpp-v1",
+      "canonical": false,
+      "status": "published",
+      "isHFChangelog": false,
+      "orgPlan": "team"
+    }
+  ],
+  "pageIndex": 0,
+  "isPagination": true,
+  "numTotalItems": 907,
+  "numItemsPerPage": 14,
+  "lang": "en",
+  "canCreateBlog": false
+}

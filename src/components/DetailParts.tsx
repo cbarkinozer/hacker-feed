@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
-import { Pressable, Share, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import type { FeedItem } from '@/features/feed/types';
-import { toggleSaved, useIsSaved } from '@/features/saved/store';
+import { itemKey } from '@/features/feed/types';
+import { setNote, toggleSaved, useIsSaved, useSavedNote } from '@/features/saved/store';
 import { openExternal } from '@/lib/navigation';
 import { radius, spacing, useColors } from '@/theme';
 
@@ -19,11 +21,24 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-export function LinkRow({ icon, label, url, detail }: { icon: IconName; label: string; url: string; detail?: string }) {
+export function LinkRow({
+  icon,
+  label,
+  url,
+  detail,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  url: string;
+  detail?: string;
+  /** In-app navigation instead of opening the URL. */
+  onPress?: () => void;
+}) {
   const c = useColors();
   return (
     <Pressable
-      onPress={() => openExternal(url)}
+      onPress={onPress ?? (() => openExternal(url))}
       accessibilityRole="link"
       accessibilityLabel={`${label}${detail ? `, ${detail}` : ''}`}
       style={({ pressed }) => [
@@ -44,36 +59,61 @@ export function LinkRow({ icon, label, url, detail }: { icon: IconName; label: s
           </AppText>
         ) : null}
       </View>
-      <Icon name="open-outline" size={16} />
+      <Icon name={onPress ? 'chevron-forward' : 'open-outline'} size={16} />
     </Pressable>
   );
 }
 
-/** Save / share / open-on-HF row shared by all detail screens. */
+/** Private note on a saved item; written on blur, searchable from Search → Saved. */
+function NoteEditor({ item }: { item: FeedItem }) {
+  const c = useColors();
+  const stored = useSavedNote(item);
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <TextInput
+      value={draft ?? stored}
+      onChangeText={setDraft}
+      onBlur={() => {
+        if (draft !== null) setNote(itemKey(item), draft);
+        setDraft(null);
+      }}
+      placeholder="Add a private note…"
+      placeholderTextColor={c.textMuted}
+      multiline
+      accessibilityLabel="Private note"
+      style={[styles.note, { color: c.text, backgroundColor: c.surface, borderColor: c.border }]}
+    />
+  );
+}
+
+/** Save / share / note row shared by all detail screens. */
 export function ActionBar({ item, extra }: { item: FeedItem; extra?: ReactNode }) {
   const saved = useIsSaved(item);
   return (
-    <View style={styles.actions}>
-      <Button
-        label={saved ? 'Saved' : 'Save'}
-        icon={saved ? 'bookmark' : 'bookmark-outline'}
-        onPress={() => toggleSaved(item)}
-        variant={saved ? 'primary' : 'secondary'}
-      />
-      <Button
-        label="Share"
-        icon="share-outline"
-        variant="secondary"
-        onPress={() =>
-          Share.share({
-            message: `${item.title}\n${item.url}`,
-            url: item.url,
-            title: item.title,
-          }).catch(() => undefined)
-        }
-      />
-      {extra}
-    </View>
+    <>
+      <View style={styles.actions}>
+        <Button
+          label={saved ? 'Saved' : 'Save'}
+          icon={saved ? 'bookmark' : 'bookmark-outline'}
+          onPress={() => toggleSaved(item)}
+          variant={saved ? 'primary' : 'secondary'}
+        />
+        <Button
+          label="Share"
+          icon="share-outline"
+          variant="secondary"
+          onPress={() =>
+            Share.share({
+              message: `${item.title}\n${item.url}`,
+              url: item.url,
+              title: item.title,
+            }).catch(() => undefined)
+          }
+        />
+        {extra}
+      </View>
+      {saved ? <NoteEditor item={item} /> : null}
+    </>
   );
 }
 
@@ -93,6 +133,14 @@ export function StatBox({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  note: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    minHeight: 64,
+    textAlignVertical: 'top',
+    marginBottom: spacing.sm,
+  },
   section: { gap: spacing.sm, marginTop: spacing.xl },
   linkRow: {
     flexDirection: 'row',

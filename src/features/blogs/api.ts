@@ -1,4 +1,7 @@
+import { Platform } from 'react-native';
+
 import type { FeedItem } from '@/features/feed/types';
+import { extractArticleMarkdown } from '@/lib/html-article';
 import { buildUrl, fetchJson, fetchText, HF_BASE, HttpError } from '@/lib/http';
 
 // NOTE: /api/blog and /api/blog/community are the JSON endpoints behind huggingface.co/blog.
@@ -182,4 +185,17 @@ export async function fetchArticleMarkdown(slug: string, signal?: AbortSignal): 
     if (err instanceof HttpError && err.status === 404) return null;
     throw err;
   }
+}
+
+/** True where the article HTML page can be fetched (browsers block it: the page sends no CORS header). */
+export const canReadArticlePages = Platform.OS !== 'web';
+
+/**
+ * Best-effort readable Markdown for posts without a Markdown source (community / partner posts),
+ * extracted from the huggingface.co page. Null when unavailable — callers fall back to the browser.
+ */
+export async function fetchArticlePageMarkdown(path: string, signal?: AbortSignal): Promise<string | null> {
+  if (!canReadArticlePages) return null;
+  const html = await fetchText(`${HF_BASE}/blog/${path.split('/').map(encodeURIComponent).join('/')}`, signal);
+  return extractArticleMarkdown(html);
 }

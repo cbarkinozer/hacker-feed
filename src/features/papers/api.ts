@@ -25,6 +25,9 @@ export interface RawPaper {
   githubStars?: number;
   projectPage?: string;
   ai_keywords?: string[];
+  linkedModels?: { id?: string }[];
+  linkedDatasets?: { id?: string }[];
+  linkedSpaces?: { id?: string; emoji?: string }[];
   organization?: { name?: string; fullname?: string };
   submittedOnDailyBy?: RawUser;
 }
@@ -58,9 +61,24 @@ export interface Paper {
   submitter?: string;
   /** HF handles of linked authors, the submitter and the org. */
   handles: string[];
+  /** Models, datasets and Spaces on the Hub that cite this paper (detail endpoint only). */
+  linked: { kind: 'model' | 'dataset' | 'space'; id: string; emoji?: string }[];
 }
 
-export type PaperSort = 'latest' | 'trending';
+/** latest = today's Daily Papers; week/month = most upvoted in the current period (HF's weekly/monthly views). */
+export type PaperSort = 'latest' | 'week' | 'month' | 'trending';
+
+/** ISO-8601 week id, e.g. "2026-W46" (weeks start Monday; week 1 contains the first Thursday). */
+export function isoWeek(date: Date): string {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
+  const week = Math.ceil(((d.getTime() - yearStart) / 86_400_000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+export const isoMonth = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 
 export const paperLinks = (id: string) => ({
   hf: `${HF_BASE}/papers/${id}`,
@@ -98,6 +116,11 @@ export function normalizePaper(raw: RawPaper, wrapper?: RawDailyPaper): Paper {
     organizationHandle: org?.name,
     submitter: submitter?.fullname || submitter?.name,
     handles: [...handles],
+    linked: [
+      ...(raw.linkedModels ?? []).map((m) => ({ kind: 'model' as const, id: m.id ?? '' })),
+      ...(raw.linkedDatasets ?? []).map((m) => ({ kind: 'dataset' as const, id: m.id ?? '' })),
+      ...(raw.linkedSpaces ?? []).map((m) => ({ kind: 'space' as const, id: m.id ?? '', emoji: m.emoji })),
+    ].filter((l) => l.id.length > 0),
   };
 }
 
@@ -124,21 +147,28 @@ export interface Page<T> {
   nextPage: number | null;
 }
 
-/** GET /api/daily_papers — `p` is a zero-based page index; `sort=trending` ranks across recent days. */
+/**
+ * GET /api/daily_papers — `p` is a zero-based page index. `week`/`month` return that period's papers
+ * sorted by upvotes; `sort=trending` ranks across recent days.
+ */
 export async function fetchDailyPapers(
   opts: {
     page?: number;
     limit?: number;
     sort?: PaperSort;
     date?: string;
+    /** Reference date for week/month (defaults to now). */
+    now?: Date;
     signal?: AbortSignal;
   } = {},
 ): Promise<Page<Paper>> {
-  const { page = 0, limit = 20, sort = 'latest', date, signal } = opts;
+  const { page = 0, limit = 20, sort = 'latest', date, now = new Date(), signal } = opts;
   const url = buildUrl('/api/daily_papers', {
     p: page,
     limit,
     sort: sort === 'trending' ? 'trending' : undefined,
+    week: sort === 'week' ? isoWeek(now) : undefined,
+    month: sort === 'month' ? isoMonth(now) : undefined,
     date,
   });
   const { data, next } = await fetchJson<RawDailyPaper[]>(url, signal);

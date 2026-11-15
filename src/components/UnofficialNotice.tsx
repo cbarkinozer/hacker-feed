@@ -4,7 +4,8 @@ import { radius, spacing, useColors } from '@/theme';
 
 import { AppText } from './ui';
 
-export const UNOFFICIAL_TEXT = 'Unofficial client. Not affiliated with or endorsed by Hugging Face.';
+export const UNOFFICIAL_TEXT =
+  'Independent, open-source reader. Not affiliated with or endorsed by Hugging Face, Hacker News / Y Combinator, Kaggle, HackerTube or YouTube.';
 
 export function UnofficialNotice({ compact }: { compact?: boolean }) {
   const c = useColors();
@@ -13,7 +14,7 @@ export function UnofficialNotice({ compact }: { compact?: boolean }) {
       style={[styles.box, compact && styles.compact, { backgroundColor: `${c.accent}26`, borderColor: `${c.accent}66` }]}
       accessibilityRole="text">
       <AppText variant="caption" tone="secondary">
-        🤗 {UNOFFICIAL_TEXT}
+        {UNOFFICIAL_TEXT}
       </AppText>
     </View>
   );

@@ -8,7 +8,7 @@ import { ActionBar, Section } from '@/components/DetailParts';
 import { Markdown } from '@/components/Markdown';
 import { ErrorState, SkeletonBlock } from '@/components/states';
 import { AppText, Button, Chip, ContentColumn, KindBadge } from '@/components/ui';
-import { absoluteHfUrl, fetchArticleMarkdown } from '@/features/blogs/api';
+import { absoluteHfUrl, canReadArticlePages, fetchArticleMarkdown, fetchArticlePageMarkdown } from '@/features/blogs/api';
 import { queryKeys } from '@/features/feed/hooks';
 import type { FeedItem } from '@/features/feed/types';
 import { isFollowingHandle, toggleFollow, usePreferences } from '@/features/preferences/store';
@@ -33,11 +33,14 @@ export default function ArticleScreen() {
 
   const known = recallItem(kind, path) ?? savedStore.get().entries[`${kind}:${path}`]?.item;
   // Official canonical posts live as Markdown in github.com/huggingface/blog (slug without a namespace).
-  const tryMarkdown = kind === 'blog' && !path.includes('/');
+  const hasMarkdownSource = kind === 'blog' && !path.includes('/');
+  // Everything else (community / partner posts) is read from the page itself on iOS/Android.
+  const readable = hasMarkdownSource || canReadArticlePages;
   const md = useQuery({
     queryKey: queryKeys.article(path),
-    queryFn: ({ signal }) => fetchArticleMarkdown(path, signal),
-    enabled: tryMarkdown,
+    queryFn: async ({ signal }) =>
+      (hasMarkdownSource ? await fetchArticleMarkdown(path, signal) : null) ?? (await fetchArticlePageMarkdown(path, signal)),
+    enabled: readable,
   });
   const parsed = useMemo(() => (md.data ? parseMarkdown(md.data) : null), [md.data]);
 
@@ -91,10 +94,10 @@ export default function ArticleScreen() {
           </View>
         ) : null}
 
-        <Section title={tryMarkdown && body ? 'Article' : 'Read'}>
-          {tryMarkdown && md.isPending ? (
+        <Section title={body ? 'Article' : 'Read'}>
+          {readable && md.isPending ? (
             <SkeletonBlock lines={10} />
-          ) : tryMarkdown && md.error ? (
+          ) : hasMarkdownSource && md.error ? (
             <ErrorState error={md.error} onRetry={() => md.refetch()} fallbackUrl={url} />
           ) : body ? (
             <>
@@ -106,9 +109,9 @@ export default function ArticleScreen() {
           ) : (
             <View style={[styles.fallback, { backgroundColor: c.surface, borderColor: c.border }]}>
               <AppText variant="body" tone="secondary">
-                {kind === 'community'
-                  ? 'Community articles are only published on huggingface.co. Open it in the reader to continue.'
-                  : 'The full text of this post is only available on huggingface.co.'}
+                {canReadArticlePages
+                  ? "This article couldn't be shown here. Open it on huggingface.co to keep reading."
+                  : 'On the web this article opens on huggingface.co (browsers block loading it here). The iOS and Android apps show it inline.'}
               </AppText>
               <Button label="Read article" icon="reader-outline" onPress={() => openExternal(url)} />
             </View>

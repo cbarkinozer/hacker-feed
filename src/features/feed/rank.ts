@@ -1,3 +1,5 @@
+import { affinityScore, type Affinity } from '@/features/activity/affinity';
+
 import type { FeedItem } from './types';
 import { itemKey } from './types';
 
@@ -7,6 +9,8 @@ export interface RankContext {
   /** HF handles the user follows, lowercase. */
   following: string[];
   now: number;
+  /** Learned from opens/saves; optional so ranking works before any history exists. */
+  affinity?: Affinity;
 }
 
 const HOUR = 3_600_000;
@@ -27,14 +31,20 @@ export function isFollowed(item: FeedItem, following: string[]): boolean {
   return item.handles.some((h) => following.includes(h.toLowerCase()));
 }
 
-/** Transparent, rule-based score: recency + popularity + interest/follow boosts. No ML. */
+/** Transparent, rule-based score: recency + popularity + explicit interest/follow boosts + learned affinity (≤1). */
 export function scoreItem(item: FeedItem, ctx: RankContext): number {
   const t = timeOf(item);
   const ageHours = t ? Math.max(0, (ctx.now - t) / HOUR) : 24 * 30;
   const recency = Math.exp(-ageHours / 72);
   const engagement = item.upvotes ?? item.likes ?? 0;
   const popularity = Math.min(1, Math.log10(1 + engagement) / 3.5);
-  return recency + popularity + (matchesInterest(item, ctx.interests) ? 1.2 : 0) + (isFollowed(item, ctx.following) ? 1.5 : 0);
+  return (
+    recency +
+    popularity +
+    (matchesInterest(item, ctx.interests) ? 1.2 : 0) +
+    (isFollowed(item, ctx.following) ? 1.5 : 0) +
+    affinityScore(item, ctx.affinity)
+  );
 }
 
 /** De-duplicates by kind+id, keeping the first occurrence. */

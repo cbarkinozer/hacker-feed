@@ -1,18 +1,21 @@
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { FeedList } from '@/components/FeedList';
+import { Sidebar } from '@/components/Sidebar';
 import { MessageState } from '@/components/states';
 import { AppText, Button, ContentColumn, Segmented } from '@/components/ui';
 import { UnofficialNotice } from '@/components/UnofficialNotice';
+import { Digest } from '@/components/Digest';
+import { buildDigest } from '@/features/feed/digest';
 import { useHomeFeed, type HomeMode } from '@/features/feed/hooks';
 import { isNewSince } from '@/features/feed/rank';
-import { KIND_LABEL, type FeedItem } from '@/features/feed/types';
+import { itemKey, KIND_LABEL, type FeedItem } from '@/features/feed/types';
 import { usePreferences } from '@/features/preferences/store';
 import { setPaperSequence } from '@/lib/item-cache';
 import { openItem } from '@/lib/navigation';
-import { spacing } from '@/theme';
+import { SIDEBAR_BREAKPOINT, spacing } from '@/theme';
 
 const MODES: { value: HomeMode; label: string }[] = [
   { value: 'forYou', label: 'For You' },
@@ -21,9 +24,20 @@ const MODES: { value: HomeMode; label: string }[] = [
 ];
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
   const [mode, setMode] = useState<HomeMode>('forYou');
   const feed = useHomeFeed(mode);
   const prefs = usePreferences();
+  // Frozen once built: opening an item re-ranks For You, which would otherwise reshuffle today's list.
+  const [digest, setDigest] = useState<FeedItem[] | null>(null);
+  if (!digest && mode === 'forYou' && feed.settled && feed.items.length >= 5) setDigest(buildDigest(feed.items));
+  const caughtUpKey =
+    mode === 'latest' && feed.previousVisit !== null
+      ? (() => {
+          const i = feed.items.findIndex((x) => !isNewSince(x, feed.previousVisit));
+          return i > 0 ? itemKey(feed.items[i]) : undefined;
+        })()
+      : undefined;
   const isNew = useCallback((item: FeedItem) => isNewSince(item, feed.previousVisit), [feed.previousVisit]);
   const onPress = useCallback(
     (item: FeedItem) => {
@@ -39,6 +53,7 @@ export default function HomeScreen() {
         <UnofficialNotice compact />
       </View>
       <Segmented options={MODES} value={mode} onChange={setMode} />
+      {mode === 'forYou' && digest ? <Digest items={digest} onPress={onPress} /> : null}
       {mode === 'forYou' && prefs.interests.length === 0 ? (
         <AppText variant="caption" tone="muted" style={styles.pad}>
           Ranked by freshness and popularity. Pick topics in Preferences to personalize.
@@ -66,7 +81,7 @@ export default function HomeScreen() {
       </MessageState>
     ) : undefined;
 
-  return (
+  const list = (
     <FeedList
       items={feed.items}
       isLoading={feed.isLoading}
@@ -78,13 +93,23 @@ export default function HomeScreen() {
       header={header}
       empty={empty}
       isNew={isNew}
+      caughtUpKey={caughtUpKey}
       onPressItem={onPress}
       fallbackUrl="https://huggingface.co"
     />
   );
+  if (width < SIDEBAR_BREAKPOINT) return list;
+  // Wide screens: feed + a rail with this week's top papers and trending Spaces.
+  return (
+    <View style={styles.wide}>
+      <View style={{ flex: 1 }}>{list}</View>
+      <Sidebar />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  wide: { flex: 1, flexDirection: 'row', maxWidth: 1180, width: '100%', alignSelf: 'center' },
   header: {
     paddingTop: spacing.sm,
     gap: spacing.xs,

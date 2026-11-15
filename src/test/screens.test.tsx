@@ -3,9 +3,10 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import HomeScreen from '@/app/(tabs)/index';
-import SavedScreen from '@/app/(tabs)/saved';
+import SavedScreen from '@/app/(tabs)/you';
 import { FeedCard } from '@/components/FeedCard';
 import type { FeedItem } from '@/features/feed/types';
+import { DEFAULT_HOME_KINDS, setPreference } from '@/features/preferences/store';
 import { savedStore } from '@/features/saved/store';
 import { mockFetch } from '@/test/mock-fetch';
 
@@ -75,21 +76,40 @@ describe('Home screen', () => {
       ['/api/models', { body: modelsFixture }],
       ['/api/blog/community', { body: communityFixture }],
       ['/api/blog', { body: blogFixture }],
+      [
+        'hn.algolia.com',
+        {
+          body: {
+            nbPages: 1,
+            hits: [
+              { objectID: '7', title: 'A Hacker News story', url: 'https://example.com/a', author: 'pg', points: 99, num_comments: 5 },
+            ],
+          },
+        },
+      ],
     ]);
     await render(wrap(<HomeScreen />));
     expect(screen.getByText(/Not affiliated with or endorsed by Hugging Face/)).toBeTruthy();
     await screen.findAllByText('MODEL');
     // All four sources are requested and merged into one list of labelled cards.
-    for (const path of ['/api/daily_papers', '/api/models', '/api/blog?', '/api/blog/community'])
+    for (const path of ['/api/daily_papers', '/api/models', '/api/blog?', '/api/blog/community', 'hn.algolia.com'])
       expect(calls.some((u) => u.includes(path))).toBe(true);
-    const kinds = new Set(screen.getAllByText(/^(PAPER|MODEL|BLOG|ARTICLE)$/).map((n) => n.props.children));
+    const kinds = new Set(screen.getAllByText(/^(PAPER|MODEL|BLOG|ARTICLE|HN|VIDEO)$/).map((n) => n.props.children));
     expect(kinds.size).toBeGreaterThanOrEqual(3);
   });
 
   it('shows an error with retry when every source fails', async () => {
     mockFetch([]);
+    // Videos are bundled with the app and never fail, so exclude them to test the all-sources-down state.
+    await act(() =>
+      setPreference(
+        'homeKinds',
+        DEFAULT_HOME_KINDS.filter((k) => k !== 'video'),
+      ),
+    );
     await render(wrap(<HomeScreen />));
     expect(await screen.findByText("Couldn't load this")).toBeTruthy();
     expect(screen.getByText('Try again')).toBeTruthy();
+    await act(() => setPreference('homeKinds', DEFAULT_HOME_KINDS));
   });
 });

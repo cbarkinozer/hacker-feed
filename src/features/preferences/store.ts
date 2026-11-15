@@ -2,9 +2,12 @@ import type { ContentKind } from '@/features/feed/types';
 import { createPersistentStore, useStore } from '@/lib/store';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+export type Density = 'comfortable' | 'compact';
 
 export interface Preferences {
   theme: ThemePreference;
+  /** Card layout: rich cards or Hacker News–style rows. */
+  density: Density;
   /** Kinds shown in the Home feed. */
   homeKinds: ContentKind[];
   /** Topic terms that boost items in For You (lowercase). */
@@ -13,9 +16,13 @@ export interface Preferences {
   following: string[];
   /** Timestamp of the previous app session, for "new" badges. */
   lastVisit: number | null;
+  /** Items to open per week (reading goal shown in You). */
+  weeklyGoal: number;
 }
 
-export const ALL_KINDS: ContentKind[] = ['paper', 'model', 'blog', 'community'];
+export const ALL_KINDS: ContentKind[] = ['paper', 'model', 'space', 'dataset', 'blog', 'community', 'hn', 'video', 'kaggle', 'competition'];
+/** Spaces, datasets and Kaggle are opt-in for Home; they live in the Trending tab by default. */
+export const DEFAULT_HOME_KINDS: ContentKind[] = ['paper', 'model', 'blog', 'community', 'hn', 'video'];
 
 export const SUGGESTED_INTERESTS = [
   'llm',
@@ -38,10 +45,12 @@ export const SUGGESTED_INTERESTS = [
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: 'system',
-  homeKinds: ALL_KINDS,
+  density: 'comfortable',
+  homeKinds: DEFAULT_HOME_KINDS,
   interests: [],
   following: [],
   lastVisit: null,
+  weeklyGoal: 20,
 };
 
 const uniqLower = (xs: unknown) =>
@@ -69,13 +78,15 @@ export const isFollowingHandle = (following: string[], handle: string) => follow
 
 export const preferencesStore = createPersistentStore<Preferences>('hfm.preferences.v1', DEFAULT_PREFERENCES, (raw) => {
   const r = (raw ?? {}) as Partial<Preferences>;
-  const kinds = Array.isArray(r.homeKinds) ? r.homeKinds.filter((k) => ALL_KINDS.includes(k)) : ALL_KINDS;
+  const kinds = Array.isArray(r.homeKinds) ? r.homeKinds.filter((k) => ALL_KINDS.includes(k)) : DEFAULT_HOME_KINDS;
   return {
     theme: r.theme === 'light' || r.theme === 'dark' ? r.theme : 'system',
-    homeKinds: kinds.length ? kinds : ALL_KINDS,
+    density: r.density === 'compact' ? 'compact' : 'comfortable',
+    homeKinds: kinds.length ? kinds : DEFAULT_HOME_KINDS,
     interests: uniqLower(r.interests),
     following: uniqHandles(r.following),
     lastVisit: typeof r.lastVisit === 'number' ? r.lastVisit : null,
+    weeklyGoal: typeof r.weeklyGoal === 'number' && r.weeklyGoal >= 1 && r.weeklyGoal <= 500 ? Math.round(r.weeklyGoal) : 20,
   };
 });
 

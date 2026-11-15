@@ -1,14 +1,19 @@
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AppText, IconButton } from '@/components/ui';
+import { loadHfSession } from '@/features/auth/session';
+import { loadKaggleCredentials } from '@/features/kaggle/credentials';
 import { startSession } from '@/features/preferences/store';
+import { activityStore } from '@/features/activity/store';
 import { savedStore } from '@/features/saved/store';
 import { HttpError, shouldRetry } from '@/lib/http';
+import { goBackOrHome } from '@/lib/navigation';
 import { palette, useResolvedScheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -36,7 +41,7 @@ export default function RootLayout() {
   const c = palette[scheme];
 
   useEffect(() => {
-    Promise.all([startSession(), savedStore.hydrate()]).finally(() => {
+    Promise.all([startSession(), savedStore.hydrate(), activityStore.hydrate(), loadKaggleCredentials(), loadHfSession()]).finally(() => {
       setReady(true);
       SplashScreen.hideAsync().catch(() => undefined);
     });
@@ -62,15 +67,26 @@ export default function RootLayout() {
           }}>
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
           <Stack
-            screenOptions={{
+            screenOptions={({ navigation }) => ({
               headerTintColor: c.text,
               headerStyle: { backgroundColor: c.background },
               headerShadowVisible: false,
               contentStyle: { backgroundColor: c.background },
               headerBackButtonDisplayMode: 'minimal',
-            }}>
+              // Opened directly (deep link / web refresh): there is no history, so offer a way home.
+              ...(navigation.canGoBack()
+                ? {}
+                : {
+                    headerLeft: () => (
+                      <IconButton icon="home-outline" label="Go to Home" color={c.text} onPress={() => router.replace('/')} />
+                    ),
+                  }),
+            })}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="paper/[id]" options={{ title: 'Paper' }} />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="hn/[id]" options={{ title: 'Hacker News' }} />
+            <Stack.Screen name="video/[vid]" options={{ title: 'Video' }} />
             <Stack.Screen name="model/[...id]" options={{ title: 'Model' }} />
             <Stack.Screen name="article/[source]/[...path]" options={{ title: 'Article' }} />
             <Stack.Screen name="search" options={{ title: 'Search' }} />
@@ -78,7 +94,14 @@ export default function RootLayout() {
               name="settings"
               options={{
                 title: 'Preferences',
-                presentation: Platform.OS === 'ios' ? 'modal' : 'card',
+                // Always offer an explicit way out, in addition to back/swipe.
+                headerRight: () => (
+                  <Pressable onPress={goBackOrHome} accessibilityRole="button" hitSlop={10} style={{ paddingHorizontal: 8 }}>
+                    <AppText variant="body" style={{ fontWeight: '700', color: c.text }}>
+                      Done
+                    </AppText>
+                  </Pressable>
+                ),
               }}
             />
           </Stack>

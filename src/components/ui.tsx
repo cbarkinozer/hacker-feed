@@ -212,25 +212,29 @@ export function Button({
   icon,
   onPress,
   variant = 'primary',
+  disabled,
 }: {
   label: string;
   icon?: IconName;
   onPress: () => void;
   variant?: 'primary' | 'secondary';
+  disabled?: boolean;
 }) {
   const c = useColors();
   const primary = variant === 'primary';
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.button,
         {
           backgroundColor: primary ? c.accent : c.surface,
           borderColor: primary ? c.accent : c.border,
-          opacity: pressed ? 0.75 : 1,
+          opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
         },
       ]}>
       {icon ? (
