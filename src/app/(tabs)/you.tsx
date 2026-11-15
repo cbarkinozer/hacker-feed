@@ -1,10 +1,12 @@
+import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { FeedList } from '@/components/FeedList';
 import { StatsPanel } from '@/components/StatsPanel';
 import { MessageState } from '@/components/states';
-import { AppText, ContentColumn, Segmented } from '@/components/ui';
+import { AppText, Button, ContentColumn, Segmented } from '@/components/ui';
+import { useHfSession } from '@/features/auth/session';
 import type { ContentKind, FeedItem } from '@/features/feed/types';
 import { sortedEntries, useSavedEntries } from '@/features/saved/store';
 import { setPaperSequence } from '@/lib/item-cache';
@@ -28,6 +30,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 /** Personal space: reading stats and saved items (all on-device). */
 export default function YouScreen() {
   const entries = useSavedEntries();
+  const session = useHfSession();
   const [filter, setFilter] = useState<Filter>('all');
   const all = useMemo(() => sortedEntries(entries).map((e) => e.item), [entries]);
   const items = useMemo(() => all.filter((i) => filter === 'all' || i.kind === filter), [all, filter]);
@@ -47,6 +50,20 @@ export default function YouScreen() {
       onPressItem={onPress}
       header={
         <ContentColumn>
+          <View style={styles.account}>
+            {session ? (
+              <AppText variant="caption" tone="muted">
+                🤗 Signed in to Hugging Face as {session.username}
+              </AppText>
+            ) : (
+              <Button
+                label="Sign in with Hugging Face"
+                icon="log-in-outline"
+                variant="secondary"
+                onPress={() => router.push('/settings')}
+              />
+            )}
+          </View>
           <StatsPanel savedCount={all.length} />
           <AppText variant="subtitle" accessibilityRole="header" style={styles.heading}>
             Saved · {all.length}
@@ -66,5 +83,6 @@ export default function YouScreen() {
 }
 
 const styles = StyleSheet.create({
+  account: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, alignItems: 'flex-start' },
   heading: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
 });

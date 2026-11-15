@@ -164,7 +164,7 @@ export function useHomeFeed(mode: HomeMode) {
   const kaggle = useKaggleDatasetsInfinite('hottest', on('kaggle'));
   // Lazy initializer: the day is fixed for this mount, keeping render pure.
   const [today] = useState(() => dayKey(new Date()));
-  const videoRows = [dailyVideos(today, 8).map((v) => ({ ...videoToFeedItem(v), date: `${today}T00:00:00.000Z` }))];
+  const videoRows = [dailyVideos(today, 4).map((v) => ({ ...videoToFeedItem(v), date: `${today}T00:00:00.000Z` }))];
 
   const followedModels = useQueries({
     queries: (mode === 'following' ? prefs.following : []).map((handle) => ({

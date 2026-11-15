@@ -115,13 +115,23 @@ describe('reading stats', () => {
     expect(grid[0][0].level).toBe(0);
   });
 
-  it('totals and badges', () => {
+  it('totals and tiered badges', () => {
     const d = days(['2026-11-13', '2026-11-14', '2026-11-15']);
     expect(totals(d, now)).toMatchObject({ total: 6, activeDays: 3, thisWeek: 6, byKind: { paper: 6 } });
     const b = Object.fromEntries(badges(d, 10, now).map((x) => [x.id, x]));
-    expect(b.first.earned && b.streak3.earned && b.curator.earned).toBe(true);
-    expect(b.streak7).toMatchObject({ earned: false, progress: 3 / 7 });
+    // A 3-day streak is exactly bronze, so progress toward silver (7) starts at 0.
+    expect(b.streak).toMatchObject({ tier: 1, next: 7, progress: 0, earned: true });
+    expect(b.curator).toMatchObject({ tier: 1, next: 15, progress: 0.5 });
+    expect(b.papers).toMatchObject({ tier: 0, earned: false, progress: 0.6 });
+    expect(b.regular.tier).toBe(0);
     expect(dayKey(now)).toBe('2026-11-15');
+  });
+
+  it('reaches gold and stops', () => {
+    const many = Array.from({ length: 40 }, (_, i) => dayKey(new Date(2026, 9, 7 + i)));
+    const b = Object.fromEntries(badges(days(many), 60, now).map((x) => [x.id, x]));
+    expect(b.streak).toMatchObject({ tier: 3, next: null, progress: 1 });
+    expect(b.curator).toMatchObject({ tier: 3, next: null });
   });
 });
 

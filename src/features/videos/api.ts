@@ -51,8 +51,7 @@ export const CATALOG_ATTRIBUTION: string = catalog.attribution;
 export const CATALOG_GENERATED: string | null = catalog.generated ?? null;
 
 export const youtubeUrl = (vid: string) => `https://www.youtube.com/watch?v=${vid}`;
-/** HackerTube shows random video frames instead of the (often clickbait) designed thumbnail. */
-export const frameUrl = (vid: string) => `https://i.ytimg.com/vi/${vid}/hq2.jpg`;
+export const thumbnailUrl = (vid: string) => `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
 
 export function decodeVideo(c: Compact): Video {
   return {
@@ -90,7 +89,7 @@ export function videoToFeedItem(v: Video): FeedItem {
     // The data has no publish date, so videos rank on popularity and affinity alone.
     url: `https://hackertube.org/v/${v.vid}`,
     link: youtubeUrl(v.vid),
-    image: frameUrl(v.vid),
+    image: thumbnailUrl(v.vid),
     authors: v.channel ? [v.channel] : [],
     handles: v.channel ? [v.channel] : [],
     tags: [...(v.areaName ? [v.areaName.toLowerCase()] : []), ...v.tags.map((t) => t.toLowerCase())],
@@ -110,9 +109,34 @@ export const videoAreas = (): { id: string; name: string; count: number }[] => {
   return [...m.values()].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id));
 };
 
-export function listVideos({ area, query, offset = 0, limit = 20 }: { area?: string; query?: string; offset?: number; limit?: number }) {
+export type VideoMode = 'trending' | 'top';
+
+/** Newest year in which any video was discussed on HN; defines "this year" without reading the clock. */
+const latestYear = () => Math.max(0, ...allVideos().map((v) => v.lastYear ?? 0));
+
+/** Videos HN commenters recommended this year, most-recommended first. */
+export const trendingVideos = (): Video[] => {
+  const y = latestYear();
+  return allVideos()
+    .filter((v) => (v.lastYear ?? 0) >= y)
+    .sort((a, b) => b.recommenders - a.recommenders || b.mentions - a.mentions || b.score - a.score || a.vid.localeCompare(b.vid));
+};
+
+export function listVideos({
+  area,
+  query,
+  mode = 'top',
+  offset = 0,
+  limit = 20,
+}: {
+  area?: string;
+  query?: string;
+  mode?: VideoMode;
+  offset?: number;
+  limit?: number;
+}) {
   const words = (query ?? '').toLowerCase().split(/\s+/).filter(Boolean);
-  const matches = allVideos().filter((v) => {
+  const matches = (mode === 'trending' ? trendingVideos() : allVideos()).filter((v) => {
     if (area && v.area !== area) return false;
     if (!words.length) return true;
     const hay = `${v.title} ${v.channel} ${v.summary ?? ''} ${v.tags.join(' ')} ${v.areaName ?? ''}`.toLowerCase();
@@ -125,14 +149,14 @@ export function listVideos({ area, query, offset = 0, limit = 20 }: { area?: str
   };
 }
 
-/** Deterministic daily picks: a day-seeded, spread-out walk over the top of the catalog. */
-export function dailyVideos(dayKey: string, count = 5, pool = 400): Video[] {
-  const top = allVideos().slice(0, pool);
+/** Deterministic daily picks: a day-seeded, spread-out walk over the top trending videos. */
+export function dailyVideos(dayKey: string, count = 4, pool = 120): Video[] {
+  const top = trendingVideos().slice(0, pool);
   if (!top.length) return [];
   let h = 2166136261;
   for (const ch of dayKey) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const start = h % top.length;
-  const step = 97;
+  const step = 37;
   const out: Video[] = [];
   for (let i = 0; out.length < Math.min(count, top.length) && i < top.length; i++) {
     const v = top[(start + i * step) % top.length];

@@ -6,6 +6,7 @@ import { usePreferences } from '@/features/preferences/store';
 import { KIND_LABEL, type ContentKind } from '@/features/feed/types';
 import { kindColor, radius, spacing, useColors } from '@/theme';
 
+import { BadgeStrip } from './Badges';
 import { AppText } from './ui';
 
 const CELL = 12;
@@ -115,37 +116,9 @@ export function StatsPanel({ savedCount }: { savedCount: number }) {
       ) : null}
 
       <AppText variant="label" tone="muted" style={{ marginTop: spacing.sm }}>
-        BADGES · {earned.filter((b) => b.earned).length}/{earned.length}
+        BADGES · {earned.filter((b) => b.earned).length}/{earned.length} earned · {earned.filter((b) => b.tier === 3).length} gold
       </AppText>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badges}>
-        {earned.map((b) => (
-          <View
-            key={b.id}
-            accessible
-            accessibilityLabel={`${b.title}: ${b.description}. ${b.earned ? 'Earned' : `${Math.round(b.progress * 100)}% done`}`}
-            style={[
-              styles.badge,
-              {
-                borderColor: b.earned ? c.accent : c.border,
-                backgroundColor: b.earned ? `${c.accent}22` : c.surface,
-                opacity: b.earned ? 1 : 0.6,
-              },
-            ]}>
-            <AppText style={styles.badgeEmoji}>{b.emoji}</AppText>
-            <AppText variant="caption" style={{ fontWeight: '700', textAlign: 'center' }} numberOfLines={1}>
-              {b.title}
-            </AppText>
-            <AppText variant="caption" tone="muted" numberOfLines={2} style={{ textAlign: 'center', fontSize: 11, lineHeight: 14 }}>
-              {b.description}
-            </AppText>
-            {!b.earned ? (
-              <View style={[styles.progress, { backgroundColor: c.skeleton }]}>
-                <View style={{ width: `${b.progress * 100}%`, height: '100%', backgroundColor: c.accentStrong, borderRadius: 2 }} />
-              </View>
-            ) : null}
-          </View>
-        ))}
-      </ScrollView>
+      <BadgeStrip badges={earned} />
     </View>
   );
 }
@@ -168,9 +141,6 @@ const styles = StyleSheet.create({
   heatCell: { width: CELL, height: CELL, borderRadius: 3 },
   kinds: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   kind: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  progress: { height: 4, borderRadius: 2, overflow: 'hidden' },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  badges: { gap: spacing.sm, paddingVertical: spacing.xs },
-  badge: { width: 112, alignItems: 'center', gap: 2, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1 },
-  badgeEmoji: { fontSize: 26, lineHeight: 32 },
-  progress: { width: '80%', height: 4, borderRadius: 2, marginTop: 4, overflow: 'hidden' },
 });

@@ -3,7 +3,7 @@ import type { FeedItem } from '@/features/feed/types';
 import { fetchHn, fetchHnStory, flattenComments, htmlToText, hitToFeedItem } from '@/features/hn/api';
 import { basicAuth, competitionToFeedItem, datasetToFeedItem, fetchKaggleCompetitions, fetchKaggleDatasets } from '@/features/kaggle/api';
 import { searchSaved } from '@/features/saved/store';
-import { allVideos, dailyVideos, listVideos, videoToFeedItem } from '@/features/videos/api';
+import { allVideos, dailyVideos, listVideos, trendingVideos, videoToFeedItem } from '@/features/videos/api';
 import { mockFetch } from '@/test/mock-fetch';
 
 const item = (id: string, kind: FeedItem['kind']): FeedItem => ({
@@ -86,7 +86,7 @@ describe('HackerTube catalog', () => {
     const vids = allVideos();
     expect(vids.length).toBeGreaterThan(1000);
     const f = videoToFeedItem(vids[0]);
-    expect(f).toMatchObject({ kind: 'video', image: `https://i.ytimg.com/vi/${vids[0].vid}/hq2.jpg` });
+    expect(f).toMatchObject({ kind: 'video', image: `https://i.ytimg.com/vi/${vids[0].vid}/hqdefault.jpg` });
     expect(f.link).toBe(`https://www.youtube.com/watch?v=${vids[0].vid}`);
   });
 
@@ -99,10 +99,20 @@ describe('HackerTube catalog', () => {
     if (first.area) expect(listVideos({ area: first.area, limit: 50 }).items.every((v) => v.area === first.area)).toBe(true);
   });
 
+  it('trending = discussed in the latest year, most recommended first', () => {
+    const t = trendingVideos();
+    const year = Math.max(...allVideos().map((v) => v.lastYear ?? 0));
+    expect(t.length).toBeGreaterThan(100);
+    expect(t.every((v) => v.lastYear === year)).toBe(true);
+    expect(t[0].recommenders).toBeGreaterThanOrEqual(t[50].recommenders);
+    expect(listVideos({ mode: 'trending', limit: 3 }).items.map((v) => v.vid)).toEqual(t.slice(0, 3).map((v) => v.vid));
+  });
+
   it('picks the same distinct videos for the same day', () => {
     const a = dailyVideos('2026-11-15');
     expect(a.map((v) => v.vid)).toEqual(dailyVideos('2026-11-15').map((v) => v.vid));
-    expect(new Set(a.map((v) => v.vid)).size).toBe(5);
+    expect(new Set(a.map((v) => v.vid)).size).toBe(4);
+    expect(a.every((v) => trendingVideos().includes(v))).toBe(true);
     expect(dailyVideos('2026-11-16').map((v) => v.vid)).not.toEqual(a.map((v) => v.vid));
   });
 });

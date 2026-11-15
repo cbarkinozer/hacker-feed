@@ -201,6 +201,8 @@ export default function SettingsScreen() {
       <ContentColumn>
         <UnofficialNotice />
 
+        <AccountSection />
+
         <Section title="Appearance">
           <View style={styles.negative}>
             <Segmented options={THEMES} value={prefs.theme} onChange={(t) => setPreference('theme', t)} />
@@ -243,8 +245,6 @@ export default function SettingsScreen() {
             ))}
           </View>
         </Section>
-
-        <AccountSection />
 
         <KaggleSection />
 

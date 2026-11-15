@@ -2,19 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { FeedList } from '@/components/FeedList';
-import { AppText, Chip, ContentColumn } from '@/components/ui';
-import { listVideos, videoAreas, videoToFeedItem } from '@/features/videos/api';
+import { AppText, Chip, ContentColumn, Segmented } from '@/components/ui';
+import { listVideos, type VideoMode, videoAreas, videoToFeedItem } from '@/features/videos/api';
 import { rememberItems } from '@/lib/item-cache';
 import { spacing } from '@/theme';
 
 const PAGE = 20;
 
-/** Talks and videos that Hacker News commenters keep recommending (HackerTube's catalog, bundled offline). */
+/** Videos Hacker News commenters recommend (HackerTube's catalog, bundled offline). */
 export default function WatchScreen() {
+  const [mode, setMode] = useState<VideoMode>('trending');
   const [area, setArea] = useState<string | undefined>();
   const [limit, setLimit] = useState(PAGE);
   const areas = useMemo(() => videoAreas().slice(0, 14), []);
-  const { items: videos, nextOffset } = useMemo(() => listVideos({ area, limit }), [area, limit]);
+  const { items: videos, nextOffset } = useMemo(() => listVideos({ area, mode, limit }), [area, mode, limit]);
   const items = useMemo(() => videos.map(videoToFeedItem), [videos]);
   useEffect(() => rememberItems(items), [items]);
 
@@ -29,9 +30,21 @@ export default function WatchScreen() {
       grid
       header={
         <ContentColumn>
+          <Segmented
+            options={[
+              { value: 'trending', label: 'Trending now' },
+              { value: 'top', label: 'All-time best' },
+            ]}
+            value={mode}
+            onChange={(m) => {
+              setMode(m);
+              setLimit(PAGE);
+            }}
+          />
           <AppText variant="caption" tone="muted" style={styles.note}>
-            Videos Hacker News keeps recommending, curated by HackerTube. No algorithm, no clickbait thumbnails (frames come from the
-            video).
+            {mode === 'trending'
+              ? 'Videos Hacker News commenters recommended this year, most recommended first.'
+              : 'The most recommended videos in Hacker News history. Curated by HackerTube.'}
           </AppText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             <Chip label="All" selected={!area} onPress={() => setArea(undefined)} />

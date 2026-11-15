@@ -100,38 +100,58 @@ export function totals(days: ActivityDays, now: Date): Totals {
   return { total, activeDays, thisWeek, byKind };
 }
 
+export type Tier = 0 | 1 | 2 | 3;
+export const TIER_NAME = ['Locked', 'Bronze', 'Silver', 'Gold'] as const;
+
 export interface Badge {
   id: string;
   emoji: string;
   title: string;
-  description: string;
-  earned: boolean;
-  /** 0..1 progress toward the badge. */
+  /** What the badge counts, e.g. "papers read". */
+  unit: string;
+  /** 0 = locked, 1 = bronze, 2 = silver, 3 = gold. */
+  tier: Tier;
+  value: number;
+  /** Thresholds for bronze, silver and gold. */
+  goals: [number, number, number];
+  /** Next threshold to reach, or null at gold. */
+  next: number | null;
+  /** 0..1 progress from the current tier's threshold to the next one. */
   progress: number;
+  earned: boolean;
 }
 
-/** Badges reward steady, varied reading — not time spent scrolling. */
+/** Badges reward steady, varied reading, not time spent scrolling. Each has bronze, silver and gold levels. */
 export function badges(days: ActivityDays, savedCount: number, now: Date): Badge[] {
   const t = totals(days, now);
   const longest = Math.max(longestStreak(days), currentStreak(days, now));
   const kindsTried = Object.values(t.byKind).filter((n) => (n ?? 0) > 0).length;
-  const make = (id: string, emoji: string, title: string, description: string, value: number, goal: number): Badge => ({
-    id,
-    emoji,
-    title,
-    description,
-    earned: value >= goal,
-    progress: Math.min(1, value / goal),
-  });
+  const make = (id: string, emoji: string, title: string, unit: string, value: number, goals: [number, number, number]): Badge => {
+    const tier = goals.filter((g) => value >= g).length as Tier;
+    const list: number[] = goals;
+    const next = list[tier] ?? null;
+    const floor = tier > 0 ? list[tier - 1] : 0;
+    return {
+      id,
+      emoji,
+      title,
+      unit,
+      tier,
+      value,
+      goals,
+      next,
+      progress: next === null ? 1 : Math.min(1, Math.max(0, (value - floor) / (next - floor))),
+      earned: tier > 0,
+    };
+  };
   return [
-    make('first', '🌱', 'First step', 'Open your first item', t.total, 1),
-    make('papers10', '📄', 'Paper reader', 'Read 10 papers', t.byKind.paper ?? 0, 10),
-    make('papers50', '🎓', 'Scholar', 'Read 50 papers', t.byKind.paper ?? 0, 50),
-    make('models10', '🧪', 'Model scout', 'Explore 10 models', t.byKind.model ?? 0, 10),
-    make('explorer', '🧭', 'Explorer', 'Open papers, models, Spaces, datasets and articles', kindsTried, 5),
-    make('streak3', '🔥', 'Warming up', '3-day reading streak', longest, 3),
-    make('streak7', '⚡', 'Week strong', '7-day reading streak', longest, 7),
-    make('streak30', '🏆', 'Habit formed', '30-day reading streak', longest, 30),
-    make('curator', '🔖', 'Curator', 'Save 10 items', savedCount, 10),
+    make('streak', '🔥', 'Streak', 'day streak', longest, [3, 7, 30]),
+    make('regular', '📅', 'Regular', 'active days', t.activeDays, [7, 30, 100]),
+    make('papers', '📄', 'Scholar', 'papers read', t.byKind.paper ?? 0, [10, 50, 200]),
+    make('models', '🧪', 'Model scout', 'models explored', t.byKind.model ?? 0, [10, 40, 150]),
+    make('hn', '🟧', 'HN regular', 'stories opened', t.byKind.hn ?? 0, [10, 50, 200]),
+    make('videos', '🎬', 'Watcher', 'videos opened', t.byKind.video ?? 0, [5, 25, 100]),
+    make('explorer', '🧭', 'Explorer', 'content types tried', kindsTried, [3, 5, 7]),
+    make('curator', '🔖', 'Curator', 'items saved', savedCount, [5, 15, 50]),
   ];
 }

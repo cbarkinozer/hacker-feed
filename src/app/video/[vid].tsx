@@ -7,7 +7,7 @@ import { ActionBar, LinkRow, Section, StatBox } from '@/components/DetailParts';
 import { MessageState } from '@/components/states';
 import { AppText, Button, Chip, ContentColumn, KindBadge } from '@/components/ui';
 import { hnPage } from '@/features/hn/api';
-import { findVideo, frameUrl, videoToFeedItem, youtubeUrl } from '@/features/videos/api';
+import { findVideo, thumbnailUrl, videoToFeedItem, youtubeUrl } from '@/features/videos/api';
 import { rememberItems } from '@/lib/item-cache';
 import { openExternal } from '@/lib/navigation';
 import { radius, spacing, useColors } from '@/theme';
@@ -29,7 +29,12 @@ export default function VideoScreen() {
     <ScrollView contentContainerStyle={styles.scroll} style={{ backgroundColor: c.background }}>
       <Stack.Screen options={{ title: 'Video' }} />
       <ContentColumn>
-        <Image source={frameUrl(video.vid)} style={[styles.hero, { backgroundColor: c.skeleton }]} contentFit="cover" accessible={false} />
+        <Image
+          source={thumbnailUrl(video.vid)}
+          style={[styles.hero, { backgroundColor: c.skeleton }]}
+          contentFit="cover"
+          accessible={false}
+        />
         <KindBadge kind="video" />
         <AppText variant="title" style={styles.title} accessibilityRole="header">
           {video.title}
